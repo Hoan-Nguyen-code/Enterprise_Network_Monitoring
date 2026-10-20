@@ -1,0 +1,25 @@
+{
+  "devices": [
+    {
+      "name": "R1",
+      "host": "192.168.126.10",
+      "device_type": "cisco_ios",
+      "username": "admin",
+      "interfaces": ["FastEthernet0/0", "FastEthernet0/1"]
+    },
+    {
+      "name": "R2",
+      "host": "192.168.126.11",
+      "device_type": "cisco_ios",
+      "username": "admin",
+      "interfaces": ["FastEthernet0/0", "FastEthernet0/1"]
+    }
+  ],
+  "monitoring": {
+    "interval_seconds": 30,
+    "cpu_threshold": 80,
+    "ram_threshold": 85,
+    "traffic_threshold_mbps": 80,
+    "error_threshold": 10
+  }
+}

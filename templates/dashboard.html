@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Enterprise Network Monitoring</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0b1220;
+        color: #e5e7eb;
+      }
+
+      header {
+        padding: 24px 32px;
+        background: #111c30;
+        border-bottom: 1px solid #263449;
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 25px;
+      }
+
+      header p {
+        margin: 0;
+        color: #94a3b8;
+      }
+
+      main {
+        max-width: 1450px;
+        margin: auto;
+        padding: 24px;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .card,
+      .panel {
+        background: #162238;
+        border: 1px solid #29374e;
+        border-radius: 14px;
+        padding: 20px;
+      }
+
+      .card small {
+        color: #94a3b8;
+      }
+
+      .card h2 {
+        margin: 12px 0 0;
+        font-size: 30px;
+      }
+
+      .charts {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+
+      .panel {
+        margin-bottom: 20px;
+        min-width: 0;
+      }
+
+      .panel h3 {
+        margin-top: 0;
+      }
+
+      .chart-container {
+        height: 300px;
+        position: relative;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px;
+        text-align: left;
+        border-bottom: 1px solid #29374e;
+      }
+
+      th {
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      .online {
+        color: #4ade80;
+        font-weight: bold;
+      }
+
+      .offline {
+        color: #fb7185;
+        font-weight: bold;
+      }
+
+      .warning {
+        color: #fbbf24;
+      }
+
+      footer {
+        padding: 20px;
+        text-align: center;
+        color: #64748b;
+      }
+
+      @media (max-width: 900px) {
+        .summary {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .charts {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .summary {
+          grid-template-columns: 1fr;
+        }
+
+        main {
+          padding: 12px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>Enterprise Network Monitoring</h1>
+      <p>Network Performance Dashboard | Python + Netmiko + GNS3</p>
+    </header>
+
+    <main>
+      <div class="summary">
+        <div class="card">
+          <small>Thiết bị online</small>
+          <h2 id="onlineDevices">--</h2>
+        </div>
+
+        <div class="card">
+          <small>Cổng hoạt động</small>
+          <h2 id="activeInterfaces">--</h2>
+        </div>
+
+        <div class="card">
+          <small>Tổng thiết bị</small>
+          <h2 id="totalDevices">--</h2>
+        </div>
+
+        <div class="card">
+          <small>Cảnh báo gần đây</small>
+          <h2 id="alertCount">--</h2>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Trạng thái thiết bị</h3>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Thiết bị</th>
+                <th>IP</th>
+                <th>Trạng thái</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Cập nhật</th>
+              </tr>
+            </thead>
+            <tbody id="deviceTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="charts">
+        <div class="panel">
+          <h3>CPU Usage (%)</h3>
+          <div class="chart-container">
+            <canvas id="cpuChart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>RAM Usage (%)</h3>
+          <div class="chart-container">
+            <canvas id="ramChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Network Interfaces & Traffic</h3>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Router</th>
+                <th>Interface</th>
+                <th>Status</th>
+                <th>RX (Kbps)</th>
+                <th>TX (Kbps)</th>
+                <th>Input Errors</th>
+                <th>Output Errors</th>
+              </tr>
+            </thead>
+            <tbody id="interfaceTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Alert History</h3>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Router</th>
+                <th>Mức độ</th>
+                <th>Nội dung</th>
+              </tr>
+            </thead>
+            <tbody id="alertTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      Auto-refresh every 5 seconds | Enterprise Network Monitoring
+    </footer>
+
+    <script>
+      Chart.defaults.color = "#94a3b8";
+
+      const colors = ["#38bdf8", "#4ade80", "#fbbf24", "#c084fc"];
+
+      function createChart(canvasId, label) {
+        return new Chart(document.getElementById(canvasId), {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              y: {
+                min: 0,
+                max: 100,
+                title: {
+                  display: true,
+                  text: label,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      const cpuChart = createChart("cpuChart", "CPU (%)");
+
+      const ramChart = createChart("ramChart", "RAM (%)");
+
+      function updateChart(chart, history, metric) {
+        const names = Object.keys(history).sort();
+
+        const timestamps = [
+          ...new Set(
+            names.flatMap((name) =>
+              history[name].map((item) => item.timestamp),
+            ),
+          ),
+        ]
+          .sort()
+          .slice(-30);
+
+        chart.data.labels = timestamps.map((value) => value.slice(11));
+
+        chart.data.datasets = names.map((name, index) => {
+          const lookup = new Map(
+            history[name].map((item) => [item.timestamp, item[metric]]),
+          );
+
+          return {
+            label: name,
+            data: timestamps.map((time) => lookup.get(time) ?? null),
+            borderColor: colors[index % colors.length],
+            backgroundColor: colors[index % colors.length],
+            tension: 0.3,
+            spanGaps: false,
+          };
+        });
+
+        chart.update();
+      }
+
+      function cell(value) {
+        const td = document.createElement("td");
+        td.textContent = value ?? "N/A";
+        return td;
+      }
+
+      function addRow(tbody, values, statusIndex = -1) {
+        const tr = document.createElement("tr");
+
+        values.forEach((value, index) => {
+          const td = cell(value);
+
+          if (index === statusIndex) {
+            td.className =
+              value === "ONLINE" || value === "up/up" ? "online" : "offline";
+          }
+
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      }
+
+      function formatPercent(value) {
+        return value == null ? "N/A" : Number(value).toFixed(2) + "%";
+      }
+
+      function formatKbps(value) {
+        return value == null ? "N/A" : (value / 1000).toFixed(2);
+      }
+
+      async function loadDashboard() {
+        try {
+          const response = await fetch("/api/dashboard", { cache: "no-store" });
+
+          if (!response.ok) {
+            throw new Error("API unavailable");
+          }
+
+          const data = await response.json();
+
+          document.getElementById("onlineDevices").textContent =
+            data.summary.online_devices + "/" + data.summary.total_devices;
+
+          document.getElementById("activeInterfaces").textContent =
+            data.summary.active_interfaces +
+            "/" +
+            data.summary.total_interfaces;
+
+          document.getElementById("totalDevices").textContent =
+            data.summary.total_devices;
+
+          document.getElementById("alertCount").textContent =
+            data.alerts.length;
+
+          const deviceTable = document.getElementById("deviceTable");
+
+          deviceTable.replaceChildren();
+
+          data.devices.forEach((device) => {
+            addRow(
+              deviceTable,
+              [
+                device.name,
+                device.host,
+                device.online ? "ONLINE" : "OFFLINE",
+                formatPercent(device.cpu),
+                formatPercent(device.ram),
+                device.timestamp,
+              ],
+              2,
+            );
+          });
+
+          const interfaceTable = document.getElementById("interfaceTable");
+
+          interfaceTable.replaceChildren();
+
+          data.interfaces.forEach((item) => {
+            addRow(
+              interfaceTable,
+              [
+                item.device,
+                item.name,
+                item.status + "/" + item.protocol,
+                formatKbps(item.rx_bps),
+                formatKbps(item.tx_bps),
+                item.input_errors ?? "N/A",
+                item.output_errors ?? "N/A",
+              ],
+              2,
+            );
+          });
+
+          const alertTable = document.getElementById("alertTable");
+
+          alertTable.replaceChildren();
+
+          data.alerts.forEach((alert) => {
+            addRow(alertTable, [
+              alert.timestamp,
+              alert.device,
+              alert.level,
+              alert.message,
+            ]);
+          });
+
+          updateChart(cpuChart, data.history, "cpu");
+
+          updateChart(ramChart, data.history, "ram");
+        } catch (error) {
+          console.error("Dashboard refresh failed:", error);
+        }
+      }
+
+      loadDashboard();
+      setInterval(loadDashboard, 5000);
+    </script>
+  </body>
+</html>

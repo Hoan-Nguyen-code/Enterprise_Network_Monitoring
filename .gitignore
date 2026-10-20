@@ -1,0 +1,16 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+logs/
+reports/
+data/*.csv
+*.image
+*.bin
+*.qcow2
+*.vmdk
